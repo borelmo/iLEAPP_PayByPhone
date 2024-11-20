@@ -1,6 +1,6 @@
 __artifacts_v2__ = {
-    "userPayByPhone": {  # Same name as the main function
-        "name": "PayByPhone - Users and Vehicules Info",  # Title used in html report sidebar
+    "userPayByPhone": {  
+        "name": "PayByPhone - Users and Vehicules Info",
         "description": "Permet de recueillir les données de l'application PayByPhone",
         "author": "@flashesc, @thibgav, @borelmo",
         "version": "1.1",
