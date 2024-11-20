@@ -25,7 +25,7 @@ If on macOS (Intel) make sure Xcode is installed and have command line tools upd
 
 ### PayByPhone App
 
-Code to parse the PayByPhone application. 
+Little script to parse the PayByPhone application. 
 
 
 ## Acknowledgements
