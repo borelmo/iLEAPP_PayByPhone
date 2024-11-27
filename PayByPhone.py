@@ -23,7 +23,7 @@ __artifacts_v2__ = {
         "name": "PayByPhone - Parking Sessions",  
         "description": "Liste de sessions des parking",
         "author": "@flashesc, @thibgav, @borelmo",
-        "version": "1.1",
+        "version": "1.2",
         "date": "2024-11-20",
         "requirements": "none",
         "category": "Parking",  
