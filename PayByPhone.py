@@ -158,18 +158,20 @@ def sessionPayByPhone(files_found, report_folder, seeker, wrap_text, timezone_of
     with open_sqlite_db_readonly(db_file) as db:
         cursor = db.cursor()
         cursor.execute('''
-        SELECT v.ZVEHICLEDESCRIPTION as Voiture,
-                   ps.ZAMOUNT as Prix,
-                   l.ZCURRENCY as Devise,
-                   ps.ZCOORDINATELATITUDE as Latitude,
-                   ps.ZCOORDINATELONGITUDE as Longitude,
-                   ps.ZSTARTTIME AS "Heure_arrivee",
-                   ps.ZEXPIRETIME AS "Heure_depart",
-                   ps.ZLOCATIONNUMBER AS "tarif/zone",             
-                   l.ZNAME as Nom_parking,
-                   l.ZVENDORNAME as Ville,
-                   l.ZCOUNTRY as Pays,
-                   l.ZLOTMESSAGE as Info
+        SELECT 
+                ps.ZSTARTTIME AS "Heure_arrivee",
+                ps.ZEXPIRETIME AS "Heure_depart",
+                u.ZEMAIL,
+                v.ZVEHICLEDESCRIPTION as Voiture,
+                ps.ZAMOUNT as Prix,
+                l.ZCURRENCY as Devise,
+                ps.ZCOORDINATELATITUDE as Latitude,
+                ps.ZCOORDINATELONGITUDE as Longitude,
+                ps.ZLOCATIONNUMBER AS "tarif/zone",             
+                l.ZNAME as Nom_parking,
+                l.ZVENDORNAME as Ville,
+                l.ZCOUNTRY as Pays,
+                l.ZLOTMESSAGE as Info
             FROM ZVEHICLE AS v
             JOIN ZPARKINGSESSION AS ps
                 ON v.Z_PK = ps.ZVEHICLE
@@ -182,23 +184,24 @@ def sessionPayByPhone(files_found, report_folder, seeker, wrap_text, timezone_of
         all_rows = cursor.fetchall()
 
         for row in all_rows:
-            timestamp_1 = convert_to_zurich_time(row[5])
-            timestamp_2 = convert_to_zurich_time(row[6])
-            price_adapted = format_price(row[1])
-            info_lisible = lisible_text(row[11])
+            timestamp_1 = convert_to_zurich_time(row[0])
+            timestamp_2 = convert_to_zurich_time(row[1])
+            price_adapted = format_price(row[4])
+            info_lisible = lisible_text(row[12])
             data_list.append(
-                (row[0], price_adapted, row[2], row[3], row[4], timestamp_1, timestamp_2,
-                    row[7], row[8], row[9], row[10], info_lisible,)
+                (timestamp_1, timestamp_2, row[2],row[3], price_adapted,row[5], row[6], row[7], 
+                    row[8], row[9], row[10], row[11], info_lisible,)
                 )
 
     data_headers = (
+            'Heure arrivée',
+            'Heure départ',
+            'Email',
             'Voiture',
             'Prix',
             'Devise',
             'Latitude',
             'Longitude',
-            'Heure arrivée',
-            'Heure départ',
             'Tarif/zone',
             'Nom du parking',
             'Ville',
