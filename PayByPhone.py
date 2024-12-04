@@ -197,7 +197,7 @@ def sessionPayByPhone(files_found, report_folder, seeker, wrap_text, timezone_of
             'Heure arrivée',
             'Heure départ',
             'Email',
-            'Voiture',
+            'Véhicule',
             'Prix',
             'Devise',
             'Latitude',
