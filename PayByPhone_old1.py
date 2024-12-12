@@ -7,28 +7,28 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '.
 __artifacts_v2__ = {
     "userPayByPhone": {  
         "name": "PayByPhone - Users and Vehicules Info",
-        "description": "Collect data from PayByPhone",
+        "description": "Permet de recueillir les données de l'application PayByPhone",
         "author": "@flashesc, @thibgav, @borelmo",
-        "version": "1.2",
+        "version": "1.1",
         "date": "2024-11-20",
         "requirements": "none",
         "category": "Parking",  
         "notes": "",
-        "paths": ('*/var/mobile/Containers/Data/Application/*/Documents/PayByPhone.sqlite*',  '*/var/mobile/Containers/Data/Application/*/Documents/*.png'),  
-        "output_types": ["tsv", "timeline", "kml", "lava"],
+        "paths": ('*/var/mobile/Containers/Data/Application/*/Documents/PayByPhone.sqlite*'),  
+        "output_types": "all",
         "artifact_icon": "users"
 
     },
     "sessionPayByPhone": { 
         "name": "PayByPhone - Parking Sessions",  
-        "description": "List of parking sessions",
+        "description": "Liste de sessions des parking",
         "author": "@flashesc, @thibgav, @borelmo",
         "version": "1.2",
         "date": "2024-11-20",
         "requirements": "none",
         "category": "Parking",  
         "notes": "",
-        "paths": ('*/var/mobile/Containers/Data/Application/*/Documents/PayByPhone.sqlite*',),
+        "paths": ('*/var/mobile/Containers/Data/Application/*/Documents/PayByPhone.sqlite*', '*/var/mobile/Containers/Data/Application/*/Documents/*.png'),
         "output_types": "all",
         "artifact_icon": "map"
     }
@@ -36,42 +36,65 @@ __artifacts_v2__ = {
 }
 
 
-from scripts.artifact_report import ArtifactHtmlReport
-from scripts.ilapfuncs import artifact_processor, open_sqlite_db_readonly, media_to_html, webkit_timestampsconv
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 
 
-def format_price(value): #limite les float à 2 chiffres après la virgule   
+def convert_to_zurich_time(timestamp):
+    # Convertir un timestamp Cocoa Core Data en heure locale Zurich
+    cocoa_base = datetime(2001, 1, 1, tzinfo=ZoneInfo("UTC"))
+    utc_time = cocoa_base + timedelta(seconds=timestamp)
+    zurich_time = utc_time.astimezone(ZoneInfo("Europe/Zurich"))
+    # Format final avec indication du fuseau horaire
+    utc_offset = zurich_time.strftime('%z')  # UTC+0100 or UTC+0200
+    utc_offset_formatted = f"UTC+{int(utc_offset[:3])}"
+    return zurich_time.strftime(f"%d-%m-%Y %H:%M:%S ({utc_offset_formatted})")
+
+
+def format_price(value):
     try:
         return f"{float(value):.2f}"
     except (ValueError, TypeError):
-        return value 
+        return value  # Retourne la valeur brute si la conversion échoue
     
 
-def lisible_text(html): #rend lisible les balises html
+def lisible_text(html):
+    """
+    Nettoie une chaîne HTML en supprimant les balises et en remplaçant les entités HTML courantes.
+
+    :param html: Chaîne HTML à nettoyer (peut être None).
+    :return: Chaîne nettoyée et lisible.
+    """
+    # Vérifie si html est None ou vide
     if not html:
-        return "" 
+        return ""  # Retourne une chaîne vide si aucune donnée
 
     try:
+        # Supprimer toutes les balises HTML avec une expression régulière
         texte_sans_balises = re.sub(r'<[^>]+>', '', html)
         
+        # Remplacer les entités HTML courantes
         texte_sans_balises = texte_sans_balises.replace('&quot;', '"')
         texte_sans_balises = texte_sans_balises.replace('&nbsp;', ' ')
         texte_sans_balises = texte_sans_balises.replace('&amp;', '&')
         
+        # Nettoyer les espaces inutiles et structurer
         lignes = [ligne.strip() for ligne in texte_sans_balises.split('\n') if ligne.strip()]
         texte_lisible = "\n".join(lignes)
         
         return texte_lisible
     except Exception as e:
+        # Capture toute exception et retourne une chaîne vide
         print(f"Erreur lors du traitement du texte HTML : {e}")
         return ""
 
+
+from scripts.ilapfuncs import artifact_processor, open_sqlite_db_readonly, media_to_html
 
 
 @artifact_processor
 def userPayByPhone(files_found, report_folder, seeker, wrap_text, time_offset):
     data_list = []
-    html_data_list = []
     db_file = ''
 
     for file_found in files_found:
@@ -103,30 +126,21 @@ def userPayByPhone(files_found, report_folder, seeker, wrap_text, time_offset):
         all_rows = cursor.fetchall()
 
         for row in all_rows:
-            media_path = f'{row[-1]}.png'
-            media_tag = media_to_html(media_path, files_found, report_folder)
+            media_file = f'{row[-1]}.png'
+            media_tag = media_to_html(media_file, files_found, report_folder)
             data_list.append(
-                (row[0], row[1], row[2], row[3], row[4], row[5], row[6], media_path)
-                )
-            html_data_list.append(
                 (row[0], row[1], row[2], row[3], row[4], row[5], row[6], media_tag)
                 )
 
     data_headers = ('Email',
-                    'Membre ID',
-                    'Phone Number',
-                    'Country',
-                    'License Plate',
-                    'Vehicule Description',
-                    'Vehicule Type',
-                    'Vehicule Picture'
+                    'ID Membre',
+                    'Téléphone',
+                    'Pays',
+                    'Numéro d\'immatriculation',
+                    'Description du véhicule',
+                    'Catégorie',
+                    'Photo du véhicule'
                     )
-
-    report = ArtifactHtmlReport('PayByPhone - Users and Vehicules Info')
-    report.start_artifact_report(report_folder, 'PayByPhone - Users and Vehicules Info', artifact_description= "Collect data from PayByPhone")
-    report.add_script()
-    report.write_artifact_data_table(data_headers, html_data_list, db_file, html_no_escape=['Vehicule Picture'])
-    report.end_artifact_report()
 
     return data_headers, data_list, db_file
 
@@ -170,8 +184,8 @@ def sessionPayByPhone(files_found, report_folder, seeker, wrap_text, timezone_of
         all_rows = cursor.fetchall()
 
         for row in all_rows:
-            timestamp_1 = webkit_timestampsconv(row[0])
-            timestamp_2 = webkit_timestampsconv(row[1])
+            timestamp_1 = convert_to_zurich_time(row[0])
+            timestamp_2 = convert_to_zurich_time(row[1])
             price_adapted = format_price(row[4])
             info_lisible = lisible_text(row[12])
             data_list.append(
@@ -180,18 +194,19 @@ def sessionPayByPhone(files_found, report_folder, seeker, wrap_text, timezone_of
                 )
 
     data_headers = (
-            'Start Time',
-            'Expire Time',
+            'Heure arrivée',
+            'Heure départ',
             'Email',
-            'Vehicule',
-            'Price',
-            'Currency',
+            'Véhicule',
+            'Prix',
+            'Devise',
             'Latitude',
             'Longitude',
-            'Location Number',
-            'Parking Name',
-            'City',
-            'Country',
+            'Tarif/zone',
+            'Nom du parking',
+            'Ville',
+            'Pays',
             'Info')
+
 
     return data_headers, data_list, db_file
